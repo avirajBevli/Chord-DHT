@@ -12,30 +12,6 @@
 #include <mutex>
 using namespace std;
 
-
-struct Node{
-	int node_index; // the index of node in the network
-	string nodeID; // nodeID = Hash(to_string(node_index))
-	string nodeIP;
-	// string nodePort; // port with which it communicates with tracker
-	// int socket_id; // socket_id through which tracker communicates with the node
-	// struct sockaddr_in socket_addr_with_tracker; // socket address through which node is connected to tracker 
-	// struct sockaddr_in listening_socket_addr; // socket address at which this peer listens
-
-	Node(string nodeID_in){
-		// nodeIP = "127.0.0.1";
-		// nodePort = "1010";
-		nodeID = nodeID_in;
-		node_index = 0;
-	}
-
-	bool operator < (const Node &other) const {
-		if(nodeID < other.nodeID) return 1;
-		else return 0;
-	}
-};
-
-
 #define HASH_LEN 5
 #define MAX_LEN 200
 #define NUM_COLORS 6
@@ -51,6 +27,34 @@ string find_hash(string str){
 	string ret = hashval.substr(0,HASH_LEN);
 	return ret;
 }
+
+struct Node{
+	int node_index; // the index of node in the network
+	string node_hash_id; // nodeID = Hash(to_string(node_index))
+	// string nodeIP;
+	// string nodePort; // port with which it communicates with tracker
+	// int socket_id; // socket_id through which tracker communicates with the node
+	// struct sockaddr_in socket_addr_with_tracker; // socket address through which node is connected to tracker 
+	// struct sockaddr_in listening_socket_addr; // socket address at which this peer listens
+
+	Node(string node_hash_id_in){
+		// nodeIP = "127.0.0.1";
+		// nodePort = "1010";
+		node_hash_id = node_hash_id_in;
+		node_index = 0;
+	}
+
+	Node(int node_index_in){
+		node_index = node_index_in;
+		node_hash_id = find_hash(to_string(node_index));
+	}
+
+	bool operator < (const Node &other) const {
+		if(node_hash_id < other.node_hash_id) return 1;
+		else return 0;
+	}
+};
+
 
 string recv_str(int socket_id){
 	// Receive an integer value
@@ -82,7 +86,7 @@ string recv_str(int socket_id){
 		received_string += str_temp;
 		msglenrecvd+=(str_temp.size());
     }
-    cout<<"msg received: "<<received_string<<"."<<" from "<<socket_id<<endl;
+    // cout<<"msg received: "<<received_string<<"."<<" from "<<socket_id<<endl;
     fflush(stdout);
     return received_string;
 }
@@ -104,6 +108,6 @@ void send_str(string str, int socket_id){
         }
         totalSent += bytesSent;
     }
-    cout<<"msg send: "<<messageData<<". to "<<socket_id<<endl;
+    // cout<<"msg sent: "<<messageData<<". to "<<socket_id<<endl;
 	fflush(stdout);
 }

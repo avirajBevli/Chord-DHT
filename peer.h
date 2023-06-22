@@ -29,11 +29,13 @@ void init_peer(){
 		exit(-1);
 	}
     recv(socket_with_tracker, &peer_index, sizeof(peer_index), 0);
-    send_str(find_hash(to_string(peer_index)), socket_with_tracker);
+    cout<<"peer_index:"<<peer_index<<endl;
+    cout<<"peer hash: "<<find_hash(to_string(peer_index))<<endl;
+  	int next_peer_index;
+  	recv(socket_with_tracker, &next_peer_index, sizeof(next_peer_index), 0);
+  	cout<<"next_peer_index:"<<next_peer_index<<endl;
 
-
-
-
+  	// contact the next peer
     // // Get the local address of the client socket
     // socklen_t len = sizeof(peer_addr_with_tracker);
     // if (getsockname(peer_socket, (struct sockaddr*)&peer_addr_with_tracker, &len) == -1) {
