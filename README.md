@@ -1,2 +1,2 @@
 # Chord_DNS
-Chord Distributed Hash Table based DNS System written in C++
+Chord Distributed Hash Table written in C++
