@@ -16,7 +16,7 @@ using namespace std;
 struct Node{
 	int node_index; // the index of node in the network
 	string nodeID; // nodeID = Hash(to_string(node_index))
-	// string nodeIP;
+	string nodeIP;
 	// string nodePort; // port with which it communicates with tracker
 	// int socket_id; // socket_id through which tracker communicates with the node
 	// struct sockaddr_in socket_addr_with_tracker; // socket address through which node is connected to tracker 
