@@ -9,9 +9,33 @@ struct sockaddr_in sending_peer_socket_addr;  // sending peer side socket addres
 // struct sockaddr_in peer_addr_with_tracker; // peer side socket address (when connected to tracker)
 typedef pair<string,string> pair_string_string;
 
+mutex mtx_tracker_socket; // ensure that only one thread is listening at the tracker socket at a time
+
 // thread t_send_messages;
 map<pair_string_string,string> keyval_db; // < <hash(key),key>, val>
 
+
+// open listening socket
+void init_peer_as_server(){
+	if((listening_socket = socket(AF_INET,SOCK_STREAM,0))==-1){
+		perror("socket: ");
+		exit(-1);
+	}
+	listening_socket_addr.sin_family = AF_INET;
+	listening_socket_addr.sin_port = htons(BASE_PORT+peer_index); // port address at which peer will listen to new peers' request
+	listening_socket_addr.sin_addr.s_addr = INADDR_ANY;
+	bzero(&listening_socket_addr.sin_zero,0);
+	if((bind(listening_socket,(struct sockaddr *)&listening_socket_addr,sizeof(struct sockaddr_in)))==-1){
+		perror("bind error: ");
+		exit(-1);
+	}
+	if((listen(listening_socket,8))==-1){
+		perror("listen error: ");
+		exit(-1);
+	}
+	cout<<colors[NUM_COLORS-1]<<"\n\t  ====== Peer ready to serve requests ======   "<<endl<<reset_col;
+	// signal(SIGINT, catch_ctrl_c); // TODO
+}
 
 // establish socket connection with tracker
 void init_peer_as_client(){
@@ -20,7 +44,7 @@ void init_peer_as_client(){
 		exit(-1);
 	}
 	tracker_socket_addr.sin_family = AF_INET; // IPV4
-	tracker_socket_addr.sin_port = htons(10000); // Port no. of server
+	tracker_socket_addr.sin_port = htons(BASE_PORT); // Port no. of server
 	tracker_socket_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); // Provide IP address of server 
 	bzero(&tracker_socket_addr.sin_zero,(0));
 	if((connect(socket_with_tracker,(struct sockaddr *)&tracker_socket_addr,sizeof(struct sockaddr_in)))==-1){
@@ -28,6 +52,8 @@ void init_peer_as_client(){
 		close(socket_with_tracker);
 		exit(-1);
 	}
+	// int new_peer_flag = 1; // let tracker know that the connection is from a new peer not db_updater
+	// send(socket_with_tracker, &new_peer_flag, sizeof(new_peer_flag), 0); 
     recv(socket_with_tracker, &peer_index, sizeof(peer_index), 0);
     cout<<"peer_index:"<<peer_index<<endl;
     cout<<"peer hash: "<<find_hash(to_string(peer_index))<<endl;
@@ -48,7 +74,6 @@ void init_peer_as_client(){
 	// uint16_t port = ntohs(peer_addr_with_tracker.sin_port);
 	// // cout << "Client: " << ip << ", " << port << endl;
 
-
     // string ipstr(ip);
     // peernode.nodeIP = ipstr;
     // peernode.nodePort = to_string(port);
@@ -58,12 +83,6 @@ void init_peer_as_client(){
     // peernode.listening_socket_addr = ; // TODO: set later in code
     // send get_next_peer(id) request to tracker
     // send_str(socket_with_tracker, peernode.nodeID);
-
-
-	// receive next_peer index from tracker
-	// int sending_peer_index;
-	// recv(socket_with_tracker, &sending_peer_index, sizeof(sending_peer_index), 0);
-
 	
 
 	// open up a socket with next peer (sending peer) {if it exists}
@@ -76,54 +95,36 @@ void init_peer_as_client(){
 		exit(-1);
 	}
 	sending_peer_socket_addr.sin_family = AF_INET; // IPV4
-	sending_peer_socket_addr.sin_port = htons(10000+sending_peer_index); // Port no. of sending peer (acting as a server)
+	sending_peer_socket_addr.sin_port = htons(BASE_PORT + sending_peer_index); // Port no. of sending peer (acting as a server)
 	sending_peer_socket_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
 	bzero(&sending_peer_socket_addr.sin_zero,(0));
 	if((connect(socket_with_sending_peer,(struct sockaddr *)&sending_peer_socket_addr,sizeof(struct sockaddr_in)))==-1){
-		perror("connect: ");
+		perror("connect:: ");
 		close(socket_with_sending_peer);
 		exit(-1);
 	}
 	send(socket_with_sending_peer, &peer_index, sizeof(peer_index), 0); // send peer_index of this node to new node so that new node can decide which entries to send the this node
+	// cout<<"sent peer_index:"<<peer_index<<endl;
 
 	// use this socket to recv DB entries from the sending peer and update current peer's own data
 	int numentries_to_recv;
 	recv(socket_with_sending_peer, &numentries_to_recv, sizeof(numentries_to_recv), 0);
+	cout<<"numentries_to_recv:"<<numentries_to_recv<<endl;
 	for(int i=0;i<3*numentries_to_recv;i++){
 		string key_hash = recv_str(socket_with_sending_peer);
 		string key = recv_str(socket_with_sending_peer);
 		string val = recv_str(socket_with_sending_peer);
 		keyval_db[make_pair(key_hash,key)] = val;
 	}
-	
 
 	cout<<colors[NUM_COLORS-1]<<"\n\t  ====== Peer initialised as client ======   "<<endl<<reset_col;
 }	
 
-void init_peer_as_server(){
-	if((listening_socket = socket(AF_INET,SOCK_STREAM,0))==-1){
-		perror("socket: ");
-		exit(-1);
-	}
-	listening_socket_addr.sin_family = AF_INET;
-	listening_socket_addr.sin_port = htons(10000+peer_index); // port address at which peer will listen to new peers' request
-	listening_socket_addr.sin_addr.s_addr = INADDR_ANY;
-	bzero(&listening_socket_addr.sin_zero,0);
-	if((bind(listening_socket,(struct sockaddr *)&listening_socket_addr,sizeof(struct sockaddr_in)))==-1){
-		perror("bind error: ");
-		exit(-1);
-	}
-	if((listen(listening_socket,8))==-1){
-		perror("listen error: ");
-		exit(-1);
-	}
-	cout<<colors[NUM_COLORS-1]<<"\n\t  ====== Peer ready to serve requests ======   "<<endl<<reset_col;
-	// signal(SIGINT, catch_ctrl_c); // TODO
-}
-
+// send entries to the new peer that has arrived on the network
 void handle_new_peer(int client_socket, struct sockaddr_in socket_addr){
 	int new_peer_index;
 	recv(client_socket, &new_peer_index, sizeof(new_peer_index), 0); // new_peer_index of the new peer
+	// cout<<"received request from new peer with index:"<<new_peer_index<<endl;
 
 	// go through the keyval_db of this node and send requied entries to new peer
 	vector< pair<pair_string_string, string> > entries_to_send;
@@ -133,13 +134,9 @@ void handle_new_peer(int client_socket, struct sockaddr_in socket_addr){
 			entries_to_send.push_back(make_pair(make_pair(m.first.first,m.first.second), m.second));
 		}
 	}
-	// auto it = keyval_db.lower_bound(find_hash(to_string(new_peer_index)));
-	// for(auto &it_temp : keyval_db){
-	// 	if(it_temp!=it) entries_to_send.push_back(*it);
-	// 	else break;
-	// }
 	int numentries_to_send = entries_to_send.size();
 	send(client_socket, &numentries_to_send, sizeof(numentries_to_send), 0);
+	cout<<"sent numentries_to_send: "<<numentries_to_send<<endl;
 
 	// send entries to the new node
 	for(int i=0;i<numentries_to_send;i++){
@@ -153,17 +150,21 @@ void handle_new_peer(int client_socket, struct sockaddr_in socket_addr){
 		keyval_db.erase(keyval_db.find(make_pair(entries_to_send[i].first.first, entries_to_send[i].first.second)));
 	}	
 	entries_to_send.clear();
+	cout<<"Handled new peer"<<endl;
 }
 
-// // send required database entries to the node that is demanding them
-// void send_entries(){
-// 	// receive listening_socket_address of node who wants entries
+void listen_to_tracker_for_new_keyval_entry(){
+	while(1){
+		//lock_guard<mutex> lock(mtx_tracker_socket);
 
-// 	// find iterator
-
-// 	open_socket();
-
-// 	// send entries
-
-// 	// update own database
-// }
+		string key = recv_str(socket_with_tracker);
+		if(key=="#NULL"){
+			break;
+		}
+		string val = recv_str(socket_with_tracker);
+		string key_hash = find_hash(key);
+		cout<<"recevied key:"<<key<<", val:"<<val<<" to store"<<endl;
+		keyval_db[make_pair(key_hash,key)] = val;
+	}
+	cout<<"stopped listening to tracker for new keyval entry"<<endl;
+}

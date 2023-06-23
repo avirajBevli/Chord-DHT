@@ -15,6 +15,7 @@ using namespace std;
 #define HASH_LEN 5
 #define MAX_LEN 200
 #define NUM_COLORS 6
+#define BASE_PORT 50000
 string reset_col = "\033[0m";
 string colors[] = {"\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m","\033[36m"};
 string find_color(int code){
@@ -29,7 +30,8 @@ string find_hash(string str){
 }
 
 struct Node{
-	int node_index; // the index of node in the network
+	int node_index = -1; // the index of node in the network
+	int node_socket_id = -1; // socket_id through which node communicates with the tracker
 	string node_hash_id; // nodeID = Hash(to_string(node_index))
 	// string nodeIP;
 	// string nodePort; // port with which it communicates with tracker
@@ -41,12 +43,12 @@ struct Node{
 		// nodeIP = "127.0.0.1";
 		// nodePort = "1010";
 		node_hash_id = node_hash_id_in;
-		node_index = 0;
 	}
 
-	Node(int node_index_in){
+	Node(int node_index_in, int socket_id_in){
 		node_index = node_index_in;
 		node_hash_id = find_hash(to_string(node_index));
+		node_socket_id = socket_id_in;
 	}
 
 	bool operator < (const Node &other) const {
@@ -86,7 +88,7 @@ string recv_str(int socket_id){
 		received_string += str_temp;
 		msglenrecvd+=(str_temp.size());
     }
-    // cout<<"msg received: "<<received_string<<"."<<" from "<<socket_id<<endl;
+    //cout<<"msg received: "<<received_string<<"."<<" from "<<socket_id<<endl;
     fflush(stdout);
     return received_string;
 }
@@ -108,6 +110,6 @@ void send_str(string str, int socket_id){
         }
         totalSent += bytesSent;
     }
-    // cout<<"msg sent: "<<messageData<<". to "<<socket_id<<endl;
+    //cout<<"msg sent: "<<messageData<<". to "<<socket_id<<endl;
 	fflush(stdout);
 }
