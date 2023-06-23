@@ -104,7 +104,7 @@ void listen_to_db_updater(){
 		// send key to key_holder_node_index node
 		send_str(key, key_holder_node_socket_id); 
 		send_str(val, key_holder_node_socket_id); 
-		cout<<"key:"<<key<<",val:"<<val<<" sent to node index:"<<key_holder_node_index<<endl;
+		cout<<"key:"<<key<<",val:"<<val<<" with hash: "<<find_hash(key)<<" sent to node index:"<<key_holder_node_index<<endl;
 	}
 	cout<<"Disconnected from db updater"<<endl;
 }

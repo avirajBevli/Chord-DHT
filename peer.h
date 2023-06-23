@@ -150,7 +150,7 @@ void handle_new_peer(int client_socket, struct sockaddr_in socket_addr){
 		keyval_db.erase(keyval_db.find(make_pair(entries_to_send[i].first.first, entries_to_send[i].first.second)));
 	}	
 	entries_to_send.clear();
-	cout<<"Handled new peer"<<endl;
+	cout<<"Handled new peer "<<new_peer_index<<endl;
 }
 
 void listen_to_tracker_for_new_keyval_entry(){
